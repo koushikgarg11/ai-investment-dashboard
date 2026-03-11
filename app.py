@@ -155,30 +155,38 @@ st.metric(
 )
 
 # ===============================
-# AUTO BUSINESS INSIGHTS
+# AI BUSINESS INSIGHTS
 # ===============================
 
 st.subheader("🧠 AI Business Insights")
 
 insights = []
 
-if country_data.get("Inflation",0) > 8:
-    insights.append("High inflation may reduce investment attractiveness.")
+# Inflation insight
+if "Inflation" in df.columns:
+    if country_data.get("Inflation", 0) > df["Inflation"].median():
+        insights.append("Higher inflation than global median may reduce investment attractiveness.")
 
-if country_data.get("GDP",0) > df["GDP"].median():
-    insights.append("Strong GDP indicates a large economic market.")
+# GDP insight
+if "GDP" in df.columns:
+    if country_data.get("GDP", 0) > df["GDP"].median():
+        insights.append("Strong GDP suggests a large and stable economy.")
 
-if country_data.get("Population",0) > df["Population"].median():
-    insights.append("Large population offers strong consumer demand.")
+# Population insight
+if "Population" in df.columns:
+    if country_data.get("Population", 0) > df["Population"].median():
+        insights.append("Large population indicates strong consumer demand.")
 
-if simulated_score > country_data.get("Investment Score",0):
-    insights.append("Current macro scenario improves investment outlook.")
+# Scenario insight
+if simulated_score > country_data.get("Investment Score", 0):
+    insights.append("Simulated economic changes improve the investment outlook.")
 
+# Display insights
 if insights:
     for i in insights:
         st.write("•", i)
 else:
-    st.info("No strong insights detected.")
+    st.info("No strong insights detected from the current dataset.")
 
 # ===============================
 # PDF REPORT GENERATION
