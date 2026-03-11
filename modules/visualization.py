@@ -1,15 +1,30 @@
 import plotly.express as px
 
-def country_comparison(df, countries, metric="Investment Score"):
-    df_selected = df[df["Country"].isin(countries)]
-    fig = px.bar(df_selected, x="Country", y=metric, color=metric,
-                 title=f"{metric} Comparison")
-    return fig
 
 def investment_heatmap(df):
-    fig = px.choropleth(df, locations="Country",
-                        locationmode="country names",
-                        color="Investment Score",
-                        color_continuous_scale="Viridis",
-                        title="Global Investment Attractiveness Heatmap")
+
+    fig = px.choropleth(
+        df,
+        locations="Country",
+        locationmode="country names",
+        color="Investment Score",
+        color_continuous_scale="Greens",
+        title="Global Investment Attractiveness"
+    )
+
+    return fig
+
+
+def country_comparison(df, countries):
+
+    filtered = df[df["Country"].isin(countries)]
+
+    fig = px.bar(
+        filtered,
+        x="Country",
+        y="Investment Score",
+        color="Country",
+        title="Country Investment Comparison"
+    )
+
     return fig
