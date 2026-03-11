@@ -1,8 +1,33 @@
-from modules.kpi_engine import top_industries
+def recommend_industries(country):
 
+    industry_map = {
 
-def get_recommendations(country):
+        "India":[
+            "Renewable Energy",
+            "EV Manufacturing",
+            "IT Services"
+        ],
 
-    industries = top_industries(country)
+        "Vietnam":[
+            "Electronics Manufacturing",
+            "Textile Exports",
+            "Semiconductors"
+        ],
 
-    return industries
+        "Mexico":[
+            "Automobile Manufacturing",
+            "Logistics",
+            "Electronics"
+        ],
+
+        "Brazil":[
+            "Agriculture",
+            "Mining",
+            "Energy"
+        ]
+    }
+
+    return industry_map.get(
+        country,
+        ["Technology","Infrastructure","Energy"]
+    )
