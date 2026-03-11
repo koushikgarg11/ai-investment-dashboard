@@ -1,21 +1,18 @@
-def calculate_investment_score(df):
-    """
-    Weighted formula for investment attractiveness:
-    Score = 0.4*GDP + 0.3*(1/Inflation) + 0.2*FDI + 0.1*(1/Unemployment)
-    """
-    df = df.copy()
-    df["Investment Score"] = (
-        0.4*df["GDP"] +
-        0.3*(1/df["Inflation"]) +
-        0.2*df["FDI"] +
-        0.1*(1/df["Unemployment"])
-    )
-    return df
+import numpy as np
 
-def top_industries(country_name):
-    industry_map = {
-        "India": ["IT & Software", "Textiles", "Renewable Energy"],
-        "Vietnam": ["Electronics Manufacturing", "Textiles", "Agriculture"],
-        "Mexico": ["Automotive", "Tourism", "Manufacturing"]
-    }
-    return industry_map.get(country_name, ["General Manufacturing", "Services", "Energy"])
+def calculate_investment_score(df):
+
+    score = 0
+
+    if "GDP" in df.columns:
+        score += 0.4 * (df["GDP"] / df["GDP"].max())
+
+    if "Inflation" in df.columns:
+        score += 0.3 * (1 / (df["Inflation"] + 1))
+
+    if "Population" in df.columns:
+        score += 0.3 * (df["Population"] / df["Population"].max())
+
+    df["Investment Score"] = score
+
+    return df
