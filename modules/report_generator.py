@@ -1,28 +1,37 @@
 from fpdf import FPDF
 
-def generate_pdf_report(country_data, industries, scenario_score=None):
+
+def generate_pdf_report(report_data):
+
     pdf = FPDF()
     pdf.add_page()
+
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, f"AI Investment Report: {country_data['Country']}", ln=True)
+    pdf.cell(0, 10, "Global Investment Intelligence Report", ln=True)
 
-    pdf.set_font("Arial", "", 12)
-    pdf.ln(5)
-    pdf.cell(0, 8, f"Investment Score: {round(country_data['Investment Score'],2)}", ln=True)
-    pdf.cell(0, 8, f"GDP Growth: {country_data['GDP']}", ln=True)
-    pdf.cell(0, 8, f"Inflation: {country_data['Inflation']}%", ln=True)
-    pdf.cell(0, 8, f"FDI: {country_data['FDI']} Billion USD", ln=True)
-    pdf.cell(0, 8, f"Unemployment: {country_data['Unemployment']}%", ln=True)
+    pdf.ln(10)
 
-    pdf.ln(5)
-    pdf.cell(0, 8, "Top Industries Recommended:", ln=True)
-    for i, industry in enumerate(industries, 1):
-        pdf.cell(0, 6, f"{i}. {industry}", ln=True)
+    pdf.set_font("Arial", size=12)
 
-    if scenario_score is not None:
-        pdf.ln(5)
-        pdf.cell(0, 8, f"Scenario Simulation Score: {round(scenario_score,2)}", ln=True)
+    pdf.cell(0, 10, f"Country: {report_data.get('Country','N/A')}", ln=True)
+    pdf.cell(0, 10, f"GDP: {report_data.get('GDP','N/A')}", ln=True)
+    pdf.cell(0, 10, f"Inflation: {report_data.get('Inflation','N/A')}", ln=True)
+    pdf.cell(0, 10, f"Population: {report_data.get('Population','N/A')}", ln=True)
+    pdf.cell(0, 10, f"Investment Score: {report_data.get('Investment Score','N/A')}", ln=True)
 
-    filename = f"{country_data['Country']}_investment_report.pdf"
-    pdf.output(filename)
-    return filename
+    pdf.ln(10)
+
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Recommended Industries", ln=True)
+
+    pdf.set_font("Arial", size=12)
+
+    industries = report_data.get("Industries", [])
+
+    for ind in industries:
+        pdf.cell(0, 10, f"- {ind}", ln=True)
+
+    file_name = "investment_report.pdf"
+    pdf.output(file_name)
+
+    return file_name
