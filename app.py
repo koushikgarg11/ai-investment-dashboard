@@ -1,119 +1,210 @@
 import streamlit as st
 import pandas as pd
+import requests
+import plotly.express as px
+from fpdf import FPDF
 
-from modules.data_loader import load_data
-from modules.scoring_model import calculate_score
-from modules.visualization import investment_heatmap,country_comparison
-from modules.recommendation import recommend_industries
-from modules.report_generator import generate_report
-
-
-st.set_page_config(
-    page_title="AI Global Investment Intelligence Platform",
-    layout="wide"
-)
+st.set_page_config(page_title="AI Global Investment Intelligence Platform", layout="wide")
 
 st.title("🌍 AI Global Investment Intelligence Platform")
 
-st.write(
-"Analyze global investment opportunities using macroeconomic indicators."
-)
+st.write("Analyze investment attractiveness across all countries using macroeconomic indicators.")
 
-# Load data
+# =========================
+# LOAD GLOBAL DATA
+# =========================
+
+@st.cache_data
+def load_data():
+
+    url = "https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv"
+
+    df = pd.read_csv(url)
+
+    df = df[["country","population","gdp"]]
+
+    df = df.dropna()
+
+    df = df.rename(columns={
+        "country":"Country",
+        "population":"Population",
+        "gdp":"GDP"
+    })
+
+    df = df.groupby("Country").last().reset_index()
+
+    # Simulated inflation (because dataset doesn't include it)
+    df["Inflation"] = 2 + (df["GDP"] % 8)
+
+    return df
+
+
 df = load_data()
+
+# =========================
+# INVESTMENT SCORE MODEL
+# =========================
+
+def calculate_score(df):
+
+    df["Investment Score"] = (
+        0.4*(df["GDP"]/df["GDP"].max()) +
+        0.3*(df["Population"]/df["Population"].max()) +
+        0.3*(1/(df["Inflation"]+1))
+    )
+
+    df["Investment Score"] = df["Investment Score"]*100
+
+    return df
+
 
 df = calculate_score(df)
 
-# Sidebar
-st.sidebar.header("Controls")
+# =========================
+# SIDEBAR CONTROLS
+# =========================
 
-countries = df["Country"].tolist()
+countries = sorted(df["Country"].unique())
 
-selected_country = st.sidebar.selectbox(
-    "Select Country",
-    countries
-)
+selected_country = st.sidebar.selectbox("Select Country", countries)
 
-compare = st.sidebar.multiselect(
-    "Compare Countries",
-    countries,
-    default=[selected_country]
-)
+compare = st.sidebar.multiselect("Compare Countries", countries, default=[selected_country])
 
-# Executive dashboard
+# =========================
+# EXECUTIVE DASHBOARD
+# =========================
+
 st.subheader("📊 Executive Summary")
 
-country_data = df[df["Country"]==selected_country].iloc[0]
+country_data = df[df["Country"] == selected_country].iloc[0]
 
 col1,col2,col3,col4 = st.columns(4)
 
-col1.metric("GDP",round(country_data["GDP"],2))
-col2.metric("Inflation",round(country_data["Inflation"],2))
-col3.metric("Population",round(country_data["Population"],2))
-col4.metric("Investment Score",round(country_data["Investment Score"],2))
+col1.metric("GDP", f"${country_data['GDP']:,.0f}")
+col2.metric("Population", f"{country_data['Population']:,.0f}")
+col3.metric("Inflation", round(country_data["Inflation"],2))
+col4.metric("Investment Score", round(country_data["Investment Score"],2))
 
-# Global map
+# =========================
+# GLOBAL HEATMAP
+# =========================
+
 st.subheader("🌎 Global Investment Heatmap")
 
-heatmap = investment_heatmap(df)
+fig = px.choropleth(
+    df,
+    locations="Country",
+    locationmode="country names",
+    color="Investment Score",
+    color_continuous_scale="Greens",
+)
 
-st.plotly_chart(heatmap,use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
-# Country comparison
+# =========================
+# COUNTRY COMPARISON
+# =========================
+
 st.subheader("📊 Country Comparison")
 
-chart = country_comparison(df,compare)
+compare_df = df[df["Country"].isin(compare)]
 
-st.plotly_chart(chart,use_container_width=True)
+fig2 = px.bar(
+    compare_df,
+    x="Country",
+    y="Investment Score",
+    color="Country"
+)
 
-# Industry recommendation
-st.subheader("🏭 Best Industries to Invest")
+st.plotly_chart(fig2, use_container_width=True)
 
-industries = recommend_industries(selected_country)
+# =========================
+# INDUSTRY RECOMMENDATION
+# =========================
+
+st.subheader("🏭 Recommended Industries")
+
+industry_map = {
+
+    "India":["IT Services","Renewable Energy","EV Manufacturing"],
+    "Vietnam":["Electronics Manufacturing","Textiles","Semiconductors"],
+    "Mexico":["Automobile","Electronics","Logistics"],
+    "Brazil":["Agriculture","Mining","Energy"]
+}
+
+industries = industry_map.get(selected_country, ["Technology","Infrastructure","Energy"])
 
 for i in industries:
-    st.write("•",i)
+    st.write("•", i)
 
-# Scenario simulation
+# =========================
+# SCENARIO SIMULATION
+# =========================
+
 st.subheader("🔮 Scenario Simulation")
 
-inflation_change = st.slider(
-    "Inflation Change %",
-    -5,5,0
-)
+inflation_change = st.slider("Inflation Change %", -5,5,0)
+gdp_growth = st.slider("GDP Growth %", -5,5,0)
 
-gdp_growth = st.slider(
-    "GDP Growth %",
-    -5,5,0
-)
+sim_score = country_data["Investment Score"]
 
-new_score = country_data["Investment Score"]
+sim_score += gdp_growth*2
+sim_score -= inflation_change*1.5
 
-new_score += gdp_growth*2
-new_score -= inflation_change*1.5
+st.metric("Simulated Investment Score", round(sim_score,2))
 
-st.metric("Simulated Investment Score",round(new_score,2))
+# =========================
+# AI BUSINESS INSIGHTS
+# =========================
 
-# Generate report
+st.subheader("🧠 AI Business Insights")
+
+insights = []
+
+if country_data["GDP"] > df["GDP"].median():
+    insights.append("Country has strong economic size.")
+
+if country_data["Population"] > df["Population"].median():
+    insights.append("Large consumer market.")
+
+if country_data["Inflation"] > 6:
+    insights.append("High inflation may reduce investment attractiveness.")
+
+if sim_score > country_data["Investment Score"]:
+    insights.append("Economic scenario improves investment outlook.")
+
+if insights:
+    for i in insights:
+        st.write("•", i)
+else:
+    st.info("No major insights detected.")
+
+# =========================
+# PDF REPORT
+# =========================
+
 st.subheader("📄 Investment Report")
 
-if st.button("Generate PDF Report"):
+if st.button("Generate Report"):
 
-    report_data = {
-        "Country":selected_country,
-        "GDP":country_data["GDP"],
-        "Inflation":country_data["Inflation"],
-        "Population":country_data["Population"],
-        "Investment Score":country_data["Investment Score"],
-        "Recommended Industries":industries
-    }
+    pdf = FPDF()
+    pdf.add_page()
 
-    file = generate_report(report_data)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,"Investment Report",ln=True)
+
+    pdf.set_font("Arial","",12)
+
+    pdf.cell(0,10,f"Country: {selected_country}",ln=True)
+    pdf.cell(0,10,f"GDP: {country_data['GDP']}",ln=True)
+    pdf.cell(0,10,f"Population: {country_data['Population']}",ln=True)
+    pdf.cell(0,10,f"Inflation: {country_data['Inflation']}",ln=True)
+    pdf.cell(0,10,f"Investment Score: {country_data['Investment Score']}",ln=True)
+
+    file = "report.pdf"
+
+    pdf.output(file)
 
     with open(file,"rb") as f:
 
-        st.download_button(
-            "Download Report",
-            f,
-            file_name="investment_report.pdf"
-        )
+        st.download_button("Download Report", f, file_name="investment_report.pdf")
